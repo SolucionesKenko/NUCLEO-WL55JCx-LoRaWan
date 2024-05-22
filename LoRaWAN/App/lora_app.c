@@ -37,6 +37,7 @@
 
 /* USER CODE BEGIN Includes */
 #include "rtc.h"
+#include "lorawan_comm_bridge.h"
 /* USER CODE END Includes */
 
 /* External variables ---------------------------------------------------------*/
@@ -467,6 +468,7 @@ void LoRaWAN_Init(void)
   }
 
   /* USER CODE BEGIN LoRaWAN_Init_Last */
+  LmHandlerSetDutyCycleEnable(false);
   // UTIL_TIMER_Time_t timestamp = UTIL_TIMER_GetCurrentTime();
   // APP_LOG(TS_ON, VLEVEL_M, "Epoch: %u\r\n", timestamp);
   // RTC_Set(24, 4, 11, 13, 35, 50, 4 );
@@ -509,6 +511,8 @@ static void OnRxData(LmHandlerAppData_t *appData, LmHandlerRxParams_t *params)
   /* USER CODE BEGIN OnRxData_1 */
   uint8_t RxPort = 0;
 
+    APP_LOG(TS_ON, VLEVEL_M, "App data port - %d\r\n", appData->Port);
+   // APP_LOG(TS_ON, VLEVEL_M, "App data size - %d\r\n", appData->BufferSize);
   if (params != NULL)
   {
     HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET); /* LED_BLUE */
@@ -556,12 +560,12 @@ static void OnRxData(LmHandlerAppData_t *appData, LmHandlerRxParams_t *params)
                 AppLedStateOn = appData->Buffer[0] & 0x01;
                 if (AppLedStateOn == RESET)
                 {
-                  APP_LOG(TS_OFF, VLEVEL_H, "LED OFF\r\n");
+                  APP_LOG(TS_ON, VLEVEL_M, "LED OFF\r\n");
                   HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET); /* LED_RED */
                 }
                 else
                 {
-                  APP_LOG(TS_OFF, VLEVEL_H, "LED ON\r\n");
+                  APP_LOG(TS_ON, VLEVEL_M, "LED ON\r\n");
                   HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET); /* LED_RED */
                 }
               }
@@ -597,9 +601,9 @@ static void SendTxData(void)
 #ifdef CAYENNE_LPP
     uint8_t channel = 0;
 #else
-    uint16_t pressure = 0;
-    int16_t temperature = 0;
-    uint16_t humidity = 0;
+   uint16_t pressure = 0;
+   int16_t temperature = 0;
+   uint16_t humidity = 0;
     uint32_t i = 0;
     int32_t latitude = 0;
     int32_t longitude = 0;
@@ -633,12 +637,22 @@ static void SendTxData(void)
     temperature = (int16_t)(sensor_data.temperature);
     pressure = (uint16_t)(sensor_data.pressure * 100 / 10); /* in hPa / 10 */
 
-    AppData.Buffer[i++] = AppLedStateOn;
-    AppData.Buffer[i++] = (uint8_t)((pressure >> 8) & 0xFF);
-    AppData.Buffer[i++] = (uint8_t)(pressure & 0xFF);
-    AppData.Buffer[i++] = (uint8_t)(temperature & 0xFF);
-    AppData.Buffer[i++] = (uint8_t)((humidity >> 8) & 0xFF);
-    AppData.Buffer[i++] = (uint8_t)(humidity & 0xFF);
+    telemetry_sensor_data_t sensorData;
+    sensorData.timestamp = 1621437592; //TODO: get timestamp 
+    sensorData.temperature = sensor_data.temperature; // 18
+    sensorData.flow = 3.2f;
+    sensorData.consumption = 10.0f;
+    sensorData.pressure = sensor_data.pressure;// 1000
+    sensorData.humidity = sensor_data.humidity; //50
+
+    uint16_t buffLen = lorawan_comm_buildTelemetrySensorsPacket(0xFFFA, sensorData,AppData.Buffer);
+    i += buffLen;
+    // AppData.Buffer[i++] = AppLedStateOn;
+    // AppData.Buffer[i++] = (uint8_t)((pressure >> 8) & 0xFF);
+    // AppData.Buffer[i++] = (uint8_t)(pressure & 0xFF);
+    // AppData.Buffer[i++] = (uint8_t)(temperature & 0xFF);
+    // AppData.Buffer[i++] = (uint8_t)((humidity >> 8) & 0xFF);
+    // AppData.Buffer[i++] = (uint8_t)(humidity & 0xFF);
 
     if ((LmHandlerParams.ActiveRegion == LORAMAC_REGION_US915) || (LmHandlerParams.ActiveRegion == LORAMAC_REGION_AU915)
         || (LmHandlerParams.ActiveRegion == LORAMAC_REGION_AS923))
@@ -653,15 +667,15 @@ static void SendTxData(void)
       latitude = sensor_data.latitude;
       longitude = sensor_data.longitude;
 
-      AppData.Buffer[i++] = GetBatteryLevel();        /* 1 (very low) to 254 (fully charged) */
-      AppData.Buffer[i++] = (uint8_t)((latitude >> 16) & 0xFF);
-      AppData.Buffer[i++] = (uint8_t)((latitude >> 8) & 0xFF);
-      AppData.Buffer[i++] = (uint8_t)(latitude & 0xFF);
-      AppData.Buffer[i++] = (uint8_t)((longitude >> 16) & 0xFF);
-      AppData.Buffer[i++] = (uint8_t)((longitude >> 8) & 0xFF);
-      AppData.Buffer[i++] = (uint8_t)(longitude & 0xFF);
-      AppData.Buffer[i++] = (uint8_t)((altitudeGps >> 8) & 0xFF);
-      AppData.Buffer[i++] = (uint8_t)(altitudeGps & 0xFF);
+      // AppData.Buffer[i++] = GetBatteryLevel();        /* 1 (very low) to 254 (fully charged) */
+      // AppData.Buffer[i++] = (uint8_t)((latitude >> 16) & 0xFF);
+      // AppData.Buffer[i++] = (uint8_t)((latitude >> 8) & 0xFF);
+      // AppData.Buffer[i++] = (uint8_t)(latitude & 0xFF);
+      // AppData.Buffer[i++] = (uint8_t)((longitude >> 16) & 0xFF);
+      // AppData.Buffer[i++] = (uint8_t)((longitude >> 8) & 0xFF);
+      // AppData.Buffer[i++] = (uint8_t)(longitude & 0xFF);
+      // AppData.Buffer[i++] = (uint8_t)((altitudeGps >> 8) & 0xFF);
+      // AppData.Buffer[i++] = (uint8_t)(altitudeGps & 0xFF);
     }
 
     AppData.BufferSize = i;
