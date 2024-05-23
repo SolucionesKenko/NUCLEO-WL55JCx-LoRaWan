@@ -644,7 +644,12 @@ static void SendTxData(void)
     sensorData.consumption = 10.0f;
     sensorData.pressure = sensor_data.pressure;// 1000
     sensorData.humidity = sensor_data.humidity; //50
-
+    sensorData.vBatLevel = GetBatteryLevel();        /* 1 (very low) to 254 (fully charged) */
+    #ifdef ADD_GPS_TO_SENSORS
+    sensorData.latitude = sensor_data.latitude;
+    sensorData.longitude = sensor_data.longitude;
+    sensorData.altitude = sensor_data.altitudeGps;
+    #endif
     uint16_t buffLen = lorawan_comm_buildTelemetrySensorsPacket(0xFFFA, sensorData,AppData.Buffer);
     i += buffLen;
     // AppData.Buffer[i++] = AppLedStateOn;
