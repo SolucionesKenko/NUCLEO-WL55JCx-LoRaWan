@@ -314,6 +314,8 @@ static UTIL_TIMER_Object_t StopJoinTimer;
   */
 static uint8_t AppDataBuffer[LORAWAN_APP_DATA_BUFFER_MAX_SIZE];
 
+static uint8_t reponseCommandBuffer[LORAWAN_APP_DATA_BUFFER_MAX_SIZE];
+volatile uint8_t isResponseAvailable;
 /**
   * @brief User application data structure
   */
@@ -469,6 +471,7 @@ void LoRaWAN_Init(void)
 
   /* USER CODE BEGIN LoRaWAN_Init_Last */
   LmHandlerSetDutyCycleEnable(false);
+  isResponseAvailable = 0;
   // UTIL_TIMER_Time_t timestamp = UTIL_TIMER_GetCurrentTime();
   // APP_LOG(TS_ON, VLEVEL_M, "Epoch: %u\r\n", timestamp);
   // RTC_Set(24, 4, 11, 13, 35, 50, 4 );
@@ -555,20 +558,8 @@ static void OnRxData(LmHandlerAppData_t *appData, LmHandlerRxParams_t *params)
               }
               break;
             case LORAWAN_USER_APP_PORT:
-              if (appData->BufferSize == 1)
-              {
-                AppLedStateOn = appData->Buffer[0] & 0x01;
-                if (AppLedStateOn == RESET)
-                {
-                  APP_LOG(TS_ON, VLEVEL_M, "LED OFF\r\n");
-                  HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET); /* LED_RED */
-                }
-                else
-                {
-                  APP_LOG(TS_ON, VLEVEL_M, "LED ON\r\n");
-                  HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET); /* LED_RED */
-                }
-              }
+                lorawan_comm_handleGetCommands(appData->Buffer, appData->BufferSize, reponseCommandBuffer);
+                isResponseAvailable = 1;
               break;
 
             default:
@@ -691,56 +682,15 @@ static void SendTxData(void)
       UTIL_TIMER_Stop(&JoinLedTimer);
       HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET); /* LED_RED */
     }
-
+    if (isResponseAvailable)
+    {
+      isResponseAvailable = 0;
+      memcpy(AppData.Buffer, reponseCommandBuffer, sizeof(reponseCommandBuffer));
+    }
     status = LmHandlerSend(&AppData, LmHandlerParams.IsTxConfirmed, false);
     if (LORAMAC_HANDLER_SUCCESS == status)
     {
       APP_LOG(TS_ON, VLEVEL_L, "SEND REQUEST\r\n");
-//      UTIL_TIMER_Time_t timestamp = UTIL_TIMER_GetCurrentTime();
-//      RTC_TimeTypeDef timeVal;
-//      HAL_RTC_GetTime(&hrtc, &timeVal, RTC_FORMAT_BIN);
-      // RTC_TimeTypeDef time;
-      // RTC_DateTypeDef date;
-      // HAL_StatusTypeDef res;
-
-      // res = HAL_RTC_GetTime(&hrtc, &time, RTC_FORMAT_BIN);
-      // if(res != HAL_OK) {
-      //     APP_LOG(TS_ON, VLEVEL_M,"HAL_RTC_GetTime failed: %d\r\n", res);
-      //     return;
-      // }
-
-      // res = HAL_RTC_GetDate(&hrtc, &date, RTC_FORMAT_BIN);
-      // if(res != HAL_OK) {
-      //     APP_LOG(TS_ON, VLEVEL_M,"HAL_RTC_GetDate failed: %d\r\n", res);
-      //     return;
-      // }
-      // APP_LOG(TS_ON, VLEVEL_M, "%u/%u/%u %u:%u:%u\r\n",
-    	// 	  date.Year,
-			//   date.Month,
-			//   date.Date,
-			//   time.Hours,
-			//   time.Minutes,
-			//   time.Seconds);
-
-      //   SysTime_t UnixEpoch = SysTimeGet();
-      //   struct tm localtime;
-      //   UnixEpoch.Seconds-=18; /*removing leap seconds*/
-      //   UnixEpoch.Seconds+=3600*2; /*adding 2 hours*/
-      //   SysTimeLocalTime(UnixEpoch.Seconds, & localtime);
-      //   APP_LOG(TS_ON, VLEVEL_M,"it's %02dh%02dm%02ds on %02d/%02d/%04d\n\r",
-      //   localtime.tm_hour, localtime.tm_min, localtime.tm_sec,
-      //   localtime.tm_mday, localtime.tm_mon+1, localtime.tm_year + 1900);
-
-      // APP_LOG(TS_ON, VLEVEL_L, "SEND REQUEST\r\n");
-      // APP_LOG(TS_ON, VLEVEL_M, "Payload: \r\n");
-      // APP_LOG(TS_ON, VLEVEL_M, "AppLedStateOn: %d\r\n", AppLedStateOn);
-      // APP_LOG(TS_ON, VLEVEL_M, "Pressure: %u\r\n", pressure);
-      // APP_LOG(TS_ON, VLEVEL_M, "Temperature: %u\r\n", temperature);
-      // APP_LOG(TS_ON, VLEVEL_M, "Humidity: %u\r\n", humidity);
-      // APP_LOG(TS_ON, VLEVEL_M, "Latitude: %u\r\n", latitude);
-      // APP_LOG(TS_ON, VLEVEL_M, "Longitude: %u\r\n", longitude);
-      // APP_LOG(TS_ON, VLEVEL_M, "AltitudeGps: %u\r\n", altitudeGps);
-      // APP_LOG(TS_ON, VLEVEL_M, "BufferSize: %d\r\n", AppData.BufferSize);
     }
     else if (LORAMAC_HANDLER_DUTYCYCLE_RESTRICTED == status)
     {
