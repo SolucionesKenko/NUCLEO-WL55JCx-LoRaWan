@@ -11,6 +11,7 @@
 #include "mcu_comm_encoder.h"
 #define MAIN_HEADER_SIZE 4
 #define TELEMETRY_HEADER_SIZE 2
+#define COMMAND_RESPONSE_HEADER_SIZE 8
 #define ADD_GPS_TO_SENSORS 1
 typedef struct __attribute__((packed)) {
     uint32_t timestamp;
@@ -27,20 +28,32 @@ typedef struct __attribute__((packed)) {
     #endif
 } telemetry_sensor_data_t;
 
-typedef struct
+typedef struct __attribute__((packed))
 {
 	uint16_t type;
 	uint16_t size;
 }lorawan_comm_packet_main_header_t;
 
-typedef struct
+typedef struct __attribute__((packed))
 {
 	uint16_t sequence;
 }lorawan_comm_packet_telemetry_header_t;
 
+typedef struct __attribute__((packed))
+{
+	uint16_t originPacketType;
+    uint16_t responseCode;
+    uint32_t originToken;
+}lorawan_comm_packet_commandResponse_header_t;
+
+uint16_t lorawan_comm_handleGetCommands(uint8_t * inputBuff, uint16_t inputBuffSize, uint8_t * outputBuff);
+
 uint16_t lorawan_comm_buildCommonHeader(lorawan_comm_packet_main_header_t* headerData, uint8_t * outputBuff);
 uint16_t lorawan_comm_buildTelemetryHeader(lorawan_comm_packet_telemetry_header_t* headerData, uint8_t * outputBuff);
+uint16_t lorawan_comm_buildCommandResponseHeader(lorawan_comm_packet_commandResponse_header_t* headerData, uint8_t * outputBuff);
+
 uint16_t lorawan_comm_buildTelemetrySensorsPacket(uint16_t sequence, telemetry_sensor_data_t payload, uint8_t* outputBuff);
 uint16_t lorawan_comm_buildTelemetryPositionPacket(uint16_t sequence, mcu_comm_encoder_position_t payload, uint8_t* outputBuff);
+uint16_t lorawan_comm_buildCommandGetValvesResponsePacket(lorawan_comm_packet_commandResponse_header_t* headerData, uint16_t valvesState, uint8_t* outputBuff);
 
 #endif /* LORRAWANBRIDGE_LORAWAN_COMM_BRIDGE_H_ */
