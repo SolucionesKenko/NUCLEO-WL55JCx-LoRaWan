@@ -74,28 +74,40 @@ uint16_t lorawan_comm_handleGetCommands(uint8_t * inputBuff, uint16_t inputBuffS
     switch (packetType)
     {
     case (uint16_t)MCU_COMM_TYPE_CMD_GET_VALVES:
-        outputSize = lorawan_comm_buildCommandGetValvesResponsePacket(&responseHeader, 0xFFFE, outputBuff);
-        APP_LOG(TS_ON, VLEVEL_M, "outputBuff:\r\n");
-        for (uint8_t i = 0; i < outputSize; i++)
-        {
-            APP_LOG(TS_ON, VLEVEL_M, "%d\r\n", outputBuff[i]);
-        }
+        handle_GetValves(&responseHeader, outputBuff);
+        break;
+        case MCU_COMM_TYPE_CMD_SET_VALVES:
+        handle_SetValves(&responseHeader, inputBuff, outputBuff);
+        break;
+        case MCU_COMM_TYPE_CMD_SET_VALVE:
+        handle_SetValve(&responseHeader, inputBuff, outputBuff);
         break;
         case (uint16_t)MCU_COMM_TYPE_CMD_GET_IRRIGATION:
-        /* code */
+        handle_GetIrrigation(&responseHeader, payloadSize, outputBuff);
+        break;
+        case (uint16_t)MCU_COMM_TYPE_CMD_SET_IRRIGATION:
+        handle_SetIrrigation(&responseHeader, inputBuff, outputBuff);
         break;
         case (uint16_t)MCU_COMM_TYPE_CMD_GET_AREAS:
-        /* code */
+        handle_GetAreas(&responseHeader, outputBuff);
+        break;
+        case (uint16_t)MCU_COMM_TYPE_CMD_SET_AREAS:
+        handle_SetAreas(&responseHeader, inputBuff, outputBuff);
+        break;
+        case (uint16_t)MCU_COMM_TYPE_CMD_SET_AREA:
+        handle_SetArea(&responseHeader, inputBuff, outputBuff);
         break;
         case (uint16_t)MCU_COMM_TYPE_CMD_GET_IRRIGATION_TIME:
         /* code */
         break;
+        case (uint16_t)MCU_COMM_TYPE_CMD_SET_IRRIGATION_TIME:
+        /* code */
+        break;
     default:
         responseHeader.responseCode = 0x0004;
-        outputSize = 0;
         break;
     }
-    return outputSize;
+    return 0;
 }
 
 uint16_t lorawan_comm_buildCommonHeader(lorawan_comm_packet_main_header_t* headerData, uint8_t * outputBuff)
@@ -211,4 +223,189 @@ uint16_t lorawan_comm_buildCommandGetValvesResponsePacket(lorawan_comm_packet_co
     //Append payload
     splitUint16(valvesState, payloadPtr);
     return (MAIN_HEADER_SIZE + COMMAND_RESPONSE_HEADER_SIZE + mainHeader.size);
+}
+
+uint16_t lorawan_comm_buildCommandGetAreasResponsePacket(lorawan_comm_packet_commandResponse_header_t* headerData, uint16_t areasInfo, uint8_t* outputBuff)
+{
+    lorawan_comm_packet_main_header_t mainHeader;
+	mainHeader.type = (uint16_t)MCU_COMM_TYPE_CMD_REPLY;
+	mainHeader.size = 2;
+	// Start filling the buffer with main header
+    uint8_t* payloadPtr = outputBuff;
+	lorawan_comm_buildCommonHeader(&mainHeader, payloadPtr);
+    payloadPtr += MAIN_HEADER_SIZE;
+    // Then, append command response header
+    lorawan_comm_buildCommandResponseHeader(headerData, payloadPtr);
+    payloadPtr += COMMAND_RESPONSE_HEADER_SIZE;
+    //Append payload
+    splitUint16(areasInfo, payloadPtr);
+    return (MAIN_HEADER_SIZE + COMMAND_RESPONSE_HEADER_SIZE + mainHeader.size);    
+}
+
+uint16_t lorawan_comm_buildCommandGetIrrigationResponsePacket(lorawan_comm_packet_commandResponse_header_t* headerData, irrigation_data_t *irrigationData, uint8_t* outputBuff)
+{
+    lorawan_comm_packet_main_header_t mainHeader;
+	mainHeader.type = (uint16_t)MCU_COMM_TYPE_CMD_REPLY;
+	mainHeader.size = sizeof(irrigation_data_t); 
+    // Start filling the buffer with main header
+    uint8_t* payloadPtr = outputBuff;
+	lorawan_comm_buildCommonHeader(&mainHeader, payloadPtr);
+    payloadPtr += MAIN_HEADER_SIZE;
+    // Then, append command response header
+    lorawan_comm_buildCommandResponseHeader(headerData, payloadPtr);
+    payloadPtr += COMMAND_RESPONSE_HEADER_SIZE;
+    //Append payload
+    payloadPtr[0] = irrigationData->mode;
+    payloadPtr += 1;
+    splitUint32(irrigationData->constant, payloadPtr);
+    payloadPtr += 4;
+    splitUint32(irrigationData->pulses, payloadPtr);
+    return (MAIN_HEADER_SIZE + COMMAND_RESPONSE_HEADER_SIZE + mainHeader.size);
+}
+
+uint16_t lorawan_comm_buildCommandSetResponsePacket(lorawan_comm_packet_commandResponse_header_t* headerData, uint8_t *outputBuff)
+{
+    lorawan_comm_packet_main_header_t mainHeader;
+	mainHeader.type = (uint16_t)MCU_COMM_TYPE_CMD_REPLY;
+	mainHeader.size = 0;
+	// Start filling the buffer with main header
+    uint8_t* payloadPtr = outputBuff;
+	lorawan_comm_buildCommonHeader(&mainHeader, payloadPtr);
+    payloadPtr += MAIN_HEADER_SIZE;
+    // Then, append command response header
+    lorawan_comm_buildCommandResponseHeader(headerData, payloadPtr);
+    return (MAIN_HEADER_SIZE + COMMAND_RESPONSE_HEADER_SIZE);  
+}
+
+
+// 'GET' COMMAND HANDLERS
+uint16_t handle_GetValves(lorawan_comm_packet_commandResponse_header_t* headerData, uint8_t *outputBuff)
+{
+    //TODO: get valves data
+    uint16_t valves = 0xFFFD;
+    headerData->responseCode = 0x0001;//TODO: verify and return another error code responses
+    uint16_t outputSize = lorawan_comm_buildCommandGetValvesResponsePacket(headerData, valves, outputBuff);
+    APP_LOG(TS_ON, VLEVEL_M, "handle_GetValves-outputBuff:\r\n");
+    for (uint8_t i = 0; i < outputSize; i++)
+    {
+        APP_LOG(TS_ON, VLEVEL_M, "%d\r\n", outputBuff[i]);
+    }
+    return 0;
+}
+
+uint16_t handle_GetAreas(lorawan_comm_packet_commandResponse_header_t* headerData, uint8_t *outputBuff)
+{
+    //TODO: get area data
+    uint16_t areasInfo = 0xFFFB;
+    headerData->responseCode = 0x0001;//TODO: verify and return another error code responses
+    uint16_t outputSize = lorawan_comm_buildCommandGetAreasResponsePacket(headerData, areasInfo, outputBuff);
+    APP_LOG(TS_ON, VLEVEL_M, "handle_GetAreas-outputBuff:\r\n");
+    for (uint8_t i = 0; i < outputSize; i++)
+    {
+        APP_LOG(TS_ON, VLEVEL_M, "%d\r\n", outputBuff[i]);
+    }
+    return 0;
+}
+
+uint16_t handle_GetIrrigation(lorawan_comm_packet_commandResponse_header_t* headerData,
+                                uint16_t inputBuffSize, 
+                                uint8_t *outputBuff)
+{    
+   //TODO: get irrigation data
+   irrigation_data_t payload;
+   payload.mode = 1;
+   payload.constant = 34562UL;
+   payload.pulses = 1000UL;
+    headerData->responseCode = 0x0001;//TODO: verify and return another error code responses
+   lorawan_comm_buildCommandGetIrrigationResponsePacket(headerData, &payload, outputBuff);
+   return 0;
+}
+
+uint16_t handle_SetValves(lorawan_comm_packet_commandResponse_header_t* headerData, uint8_t *inputBuff, uint8_t *outputBuff)
+{
+    /*
+    HEADER[0-7]
+    VALVE_STATE_MSB[8]
+    VALVE_STATE_LSB[9]
+    */
+	uint8_t *inputBuff_ptr = inputBuff + 8;
+    uint16_t valvesState = mergeUint16(inputBuff_ptr); //TODO: call app setter
+    headerData->responseCode = 0x0001;//TODO: verify and return another error code responses
+    APP_LOG(TS_ON, VLEVEL_M, "handle_setValves. State: %d\r\n", valvesState);
+    lorawan_comm_buildCommandSetResponsePacket(headerData, outputBuff);
+    return 0;
+}
+
+uint16_t handle_SetValve(lorawan_comm_packet_commandResponse_header_t* headerData, uint8_t *inputBuff, uint8_t *outputBuff)
+{
+    /*
+    HEADER[0-7]
+    VALVE_ID[8]
+    VALVE_STATE[9]
+    */
+    uint8_t valveId = inputBuff[8];  
+    uint8_t valveState = inputBuff[9]; 
+    APP_LOG(TS_ON, VLEVEL_M, "handle_setValve. ValveId: %d, State: %d\r\n", valveId, valveState); //TODO: call app setter   
+    headerData->responseCode = 0x0001;//TODO: verify and return another error code responses 
+    lorawan_comm_buildCommandSetResponsePacket(headerData, outputBuff);
+    return 0;
+}
+
+uint16_t handle_SetAreas(lorawan_comm_packet_commandResponse_header_t* headerData, uint8_t *inputBuff, uint8_t *outputBuff)
+{
+    /*
+    HEADER[0-7]
+    AREAS_INFO_MSB[8]
+    AREAS_INFO_LSB[9]
+    */
+	uint8_t *inputBuff_ptr = inputBuff + 8;
+    uint16_t areasInfo = mergeUint16(inputBuff_ptr); //TODO: call app setter
+    headerData->responseCode = 0x0001;//TODO: verify and return another error code responses
+    APP_LOG(TS_ON, VLEVEL_M, "handle_setAreas. Info: %d\r\n", areasInfo);
+    lorawan_comm_buildCommandSetResponsePacket(headerData, outputBuff);
+    return 0;
+}
+
+uint16_t handle_SetArea(lorawan_comm_packet_commandResponse_header_t* headerData, uint8_t *inputBuff, uint8_t *outputBuff)
+{
+    /*
+    HEADER[0-7]
+    AREA_ID[8]
+    AREA_STATE[9]
+    */
+    uint8_t areaId = inputBuff[8];  
+    uint8_t areaState = inputBuff[9]; 
+    APP_LOG(TS_ON, VLEVEL_M, "handle_SetArea. Id: %d, State: %d\r\n", areaId, areaState);//TODO: call app setter
+    headerData->responseCode = 0x0001;//TODO: verify and return another error code responses 
+    lorawan_comm_buildCommandSetResponsePacket(headerData, outputBuff);
+    return 0;
+}
+
+uint16_t handle_SetIrrigation(lorawan_comm_packet_commandResponse_header_t* headerData, uint8_t *inputBuff, uint8_t *outputBuff)
+{
+    /*
+    HEADER[0-7]
+    IRRIGATION_MODE[8]
+    HYDRATANT_CONSTANT_MSB[9]
+    HYDRATANT_CONSTANT_BYTE3[10]
+    HYDRATANT_CONSTANT_BYTE2[11]
+    HYDRATANT_CONSTANT_LSB[12]
+    HYDRATANT_PULSES_MSB[13]
+    HYDRATANT_PULSES_BYTE3[14]
+    HYDRATANT_PULSES_BYTE2[15]
+    HYDRATANT_PULSES_LSB[16]
+    */
+    irrigation_data_t newSetting;
+    newSetting.mode = inputBuff[8];
+    uint8_t *inputBuff_ptr = inputBuff + 9;
+    newSetting.constant = mergeUint32(inputBuff_ptr);
+    inputBuff_ptr += 4;
+    newSetting.pulses = mergeUint32(inputBuff_ptr);
+    APP_LOG(TS_ON, VLEVEL_M, "handle_SetIrrigation. Mode: %u, Constant: %u, Pulses: %u\r\n", newSetting.mode,
+     newSetting.constant,
+     newSetting.pulses
+    );
+    headerData->responseCode = 0x0001;//TODO: verify and return another error code responses 
+    lorawan_comm_buildCommandSetResponsePacket(headerData, outputBuff);
+    return 0;
 }

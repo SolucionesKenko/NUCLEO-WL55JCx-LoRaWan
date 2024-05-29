@@ -45,6 +45,12 @@ typedef struct __attribute__((packed))
     uint16_t responseCode;
     uint32_t originToken;
 }lorawan_comm_packet_commandResponse_header_t;
+typedef struct __attribute__((packed))
+{
+	uint8_t mode;
+    uint32_t constant;
+    uint32_t pulses;
+}irrigation_data_t;
 
 uint16_t lorawan_comm_handleGetCommands(uint8_t * inputBuff, uint16_t inputBuffSize, uint8_t * outputBuff);
 
@@ -55,5 +61,26 @@ uint16_t lorawan_comm_buildCommandResponseHeader(lorawan_comm_packet_commandResp
 uint16_t lorawan_comm_buildTelemetrySensorsPacket(uint16_t sequence, telemetry_sensor_data_t payload, uint8_t* outputBuff);
 uint16_t lorawan_comm_buildTelemetryPositionPacket(uint16_t sequence, mcu_comm_encoder_position_t payload, uint8_t* outputBuff);
 uint16_t lorawan_comm_buildCommandGetValvesResponsePacket(lorawan_comm_packet_commandResponse_header_t* headerData, uint16_t valvesState, uint8_t* outputBuff);
+uint16_t lorawan_comm_buildCommandGetAreasResponsePacket(lorawan_comm_packet_commandResponse_header_t* headerData, uint16_t areasInfo, uint8_t* outputBuff);
+uint16_t lorawan_comm_buildCommandGetIrrigationResponsePacket(lorawan_comm_packet_commandResponse_header_t* headerData, irrigation_data_t *irrigationData, uint8_t* outputBuff);
+
+// 'GET' COMMAND HANDLERS
+
+uint16_t handle_GetValves(lorawan_comm_packet_commandResponse_header_t* headerData, uint8_t *outputBuff);
+uint16_t handle_GetIrrigation(lorawan_comm_packet_commandResponse_header_t* headerData, uint16_t inputBuffSize, uint8_t *outputBuff);
+uint16_t handle_GetAreas(lorawan_comm_packet_commandResponse_header_t* headerData, uint8_t *outputBuff);
+
+/*
+build packet for 'SET' command response. Not require to send data, just to confirm the process.
+*/
+uint16_t lorawan_comm_buildCommandSetResponsePacket(lorawan_comm_packet_commandResponse_header_t* headerData, uint8_t *outputBuff);
+
+//COMMAND SET HANDLERS
+
+uint16_t handle_SetValves(lorawan_comm_packet_commandResponse_header_t* headerData, uint8_t *inputBuff, uint8_t *outputBuff);
+uint16_t handle_SetValve(lorawan_comm_packet_commandResponse_header_t* headerData, uint8_t *inputBuff, uint8_t *outputBuff);
+uint16_t handle_SetAreas(lorawan_comm_packet_commandResponse_header_t* headerData, uint8_t *inputBuff, uint8_t *outputBuff);
+uint16_t handle_SetArea(lorawan_comm_packet_commandResponse_header_t* headerData, uint8_t *inputBuff, uint8_t *outputBuff);
+uint16_t handle_SetIrrigation(lorawan_comm_packet_commandResponse_header_t* headerData, uint8_t *inputBuff, uint8_t *outputBuff);
 
 #endif /* LORRAWANBRIDGE_LORAWAN_COMM_BRIDGE_H_ */
