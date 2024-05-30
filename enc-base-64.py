@@ -1,15 +1,8 @@
 import base64
 
-def base64_encode_binary(input_bytes):
-    # Encode the bytes using Base64
-    encoded_bytes = base64.b64encode(input_bytes)
-    
-    # Convert the encoded bytes back to a string
-    encoded_string = encoded_bytes.decode('utf-8')
-    
-    return encoded_string
+# Your array here
+hex_data = bytearray([0xB0, 0x11, 0x00, 0x00, 0x12, 0x56, 0x03])
 
-# Test the function with binary value '1' (0x01)
-input_bytes = b'\x01'
-encoded_string = base64_encode_binary(input_bytes)
-print("Encoded string:", encoded_string)
+# Convert to base64
+base64_encoded = base64.b64encode(hex_data).decode('utf-8')
+print(base64_encoded)
